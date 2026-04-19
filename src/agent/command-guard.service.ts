@@ -1,7 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as readline from 'readline';
+import { IInteractionAdapter } from '../common/adapters/interaction-adapter.interface';
 
+/**
+ * Gate-keeper for shell command execution.
+ *
+ * Two-tier check:
+ *   1. If the command's base binary is in the `HARUBASHI_SAFE_COMMANDS`
+ *      whitelist → auto-approve (no user prompt).
+ *   2. Otherwise → delegate to the channel-specific {@link IInteractionAdapter}
+ *      (CLI prompt, Telegram inline buttons, etc.).
+ */
 @Injectable()
 export class CommandGuardService {
   private readonly logger = new Logger(CommandGuardService.name);
@@ -20,13 +29,16 @@ export class CommandGuardService {
     );
   }
 
-  async requestApproval(command: string): Promise<boolean> {
+  async requestApproval(
+    command: string,
+    adapter: IInteractionAdapter,
+  ): Promise<boolean> {
     if (this.isSafeCommand(command)) {
       this.logger.debug(`Auto-approved (whitelisted): ${command}`);
       return true;
     }
 
-    return this.promptUser(command);
+    return adapter.askForApproval(command);
   }
 
   // ── Private ─────────────────────────────────────────────
@@ -36,62 +48,5 @@ export class CommandGuardService {
     const binary = trimmed.split(/\s+/)[0].toLowerCase();
     const baseName = binary.split('/').pop() || binary;
     return this.safeCommands.includes(baseName);
-  }
-
-  private promptUser(command: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stderr,
-        terminal: false,
-      });
-
-      const displayCmd =
-        command.length > 120 ? command.slice(0, 117) + '...' : command;
-
-      const writePrompt = () => {
-        process.stderr.write(
-          `\n⚠️  [Command Guard] Agent wants to execute:\n` +
-            `   $ ${displayCmd}\n` +
-            `   Allow? (y/n): `,
-        );
-      };
-
-      writePrompt();
-
-      const onLine = (answer: string) => {
-        const normalized = answer.trim().toLowerCase();
-
-        // Empty input — keep waiting, re-prompt
-        if (normalized === '') {
-          writePrompt();
-          return;
-        }
-
-        const approved = normalized === 'y' || normalized === 'yes';
-        const rejected = normalized === 'n' || normalized === 'no';
-
-        if (!approved && !rejected) {
-          // Unrecognized input — keep waiting
-          process.stderr.write(
-            `   Please type "y" to allow or "n" to reject: `,
-          );
-          return;
-        }
-
-        rl.off('line', onLine);
-        rl.close();
-
-        if (approved) {
-          this.logger.log(`✅ User approved: ${displayCmd}`);
-        } else {
-          this.logger.log(`❌ User rejected: ${displayCmd}`);
-        }
-
-        resolve(approved);
-      };
-
-      rl.on('line', onLine);
-    });
   }
 }

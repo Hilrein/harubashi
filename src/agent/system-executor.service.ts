@@ -5,6 +5,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { CommandGuardService } from './command-guard.service';
 import { InterruptionService } from './interruption.service';
+import { IInteractionAdapter } from '../common/adapters/interaction-adapter.interface';
 import { ToolResult } from '../common/types/tool.types';
 
 @Injectable()
@@ -24,16 +25,19 @@ export class SystemExecutorService {
       ) || 30000;
   }
 
-  async executeCommand(input: {
-    command: string;
-    workdir?: string;
-    timeout?: number;
-  }): Promise<ToolResult> {
+  async executeCommand(
+    input: {
+      command: string;
+      workdir?: string;
+      timeout?: number;
+    },
+    adapter: IInteractionAdapter,
+  ): Promise<ToolResult> {
     const { command, workdir, timeout } = input;
     const toolUseId = ''; // caller sets this
 
     // ── Command Guard ──────────────────────────────────────
-    const approved = await this.commandGuard.requestApproval(command);
+    const approved = await this.commandGuard.requestApproval(command, adapter);
     if (!approved) {
       return {
         tool_use_id: toolUseId,
@@ -206,11 +210,13 @@ export class SystemExecutorService {
   async dispatch(
     toolName: string,
     input: Record<string, unknown>,
+    adapter: IInteractionAdapter,
   ): Promise<ToolResult> {
     switch (toolName) {
       case 'system_execute_command':
         return this.executeCommand(
           input as { command: string; workdir?: string; timeout?: number },
+          adapter,
         );
       case 'system_read_file':
         return this.readFile(

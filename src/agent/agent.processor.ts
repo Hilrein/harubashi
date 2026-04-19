@@ -15,6 +15,7 @@ import {
   ToolResultBlock,
 } from '../common/types/message.types';
 import { isToolUseBlock, isThinkingBlock, isRedactedThinkingBlock } from '../common/utils/type-guards';
+import { IInteractionAdapter } from '../common/adapters/interaction-adapter.interface';
 
 const DEFAULT_USER_NAME = 'Harunauts';
 
@@ -44,6 +45,7 @@ export class AgentProcessorService {
   async process(
     sessionId: string,
     userMessage: string,
+    adapter: IInteractionAdapter,
   ): Promise<ProcessorResult> {
     // ── 1. Ensure session & task exist ─────────────────────
     const task = await this.ensureActiveTask(sessionId, userMessage);
@@ -151,6 +153,7 @@ export class AgentProcessorService {
           const execResult = await this.executor.dispatch(
             toolBlock.name,
             toolBlock.input,
+            adapter,
           );
 
           result = {
