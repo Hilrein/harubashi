@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String        @id @default(uuid())
+  name      String?
+  createdAt DateTime      @default(now())
+  sessions  ChatSession[]
+}
+
+model ChatSession {
+  id        String        @id @default(uuid())
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id])
+  title     String?
+  status    SessionStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  tasks     Task[]
+}
+
+model Task {
+  id           String     @id @default(uuid())
+  sessionId    String
+  session      ChatSession @relation(fields: [sessionId], references: [id])
+  description  String
+  status       TaskStatus @default(PENDING)
+  priority     Priority   @default(MEDIUM)
+  scheduledFor DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  messages     Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  role      Role
+  content   String
+  createdAt DateTime @default(now())
+}
+
+enum SessionStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum TaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum Role {
+  USER
+  ASSISTANT
+}

@@ -1,0 +1,37 @@
+# ── Reference (read-only, never commit) ───────────────────
+_reference/
+
+# ── Dependencies ──────────────────────────────────────────
+node_modules/
+
+# ── Build output ──────────────────────────────────────────
+dist/
+
+# ── Environment ───────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Database ──────────────────────────────────────────────
+prisma/dev.db
+prisma/dev.db-journal
+prisma/migrations/
+
+# ── IDE ───────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Misc ──────────────────────────────────────────────────
+coverage/
+.nyc_output/
