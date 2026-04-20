@@ -2,9 +2,8 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { PrismaService } from './prisma/prisma.service';
+import { SessionsService } from './sessions/sessions.service';
 import { TelegramService } from './telegram/telegram.service';
-import { DEFAULT_USER_ID, DEFAULT_USER_NAME } from './common/constants';
 
 async function bootstrap() {
   const logger = new Logger('Daemon');
@@ -14,18 +13,11 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log'],
   });
 
-  const prisma = app.get(PrismaService);
+  const sessions = app.get(SessionsService);
   const telegram = app.get(TelegramService);
 
-  // ── Ensure a default user exists ─────────────────────────
-  await prisma.user.upsert({
-    where: { id: DEFAULT_USER_ID },
-    update: {},
-    create: {
-      id: DEFAULT_USER_ID,
-      name: DEFAULT_USER_NAME,
-    },
-  });
+  // ── Ensure the shared default user exists ────────────────
+  await sessions.ensureDefaultUser();
 
   // ── Start Telegram bot ───────────────────────────────────
   await telegram.start();

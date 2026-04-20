@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
 import { AgentModule } from '../agent/agent.module';
+import { SessionsModule } from '../sessions/sessions.module';
 import { PairingService } from './pairing.service';
 import { TelegramService } from './telegram.service';
 
 @Module({
-  imports: [PrismaModule, AgentModule],
+  imports: [AgentModule, SessionsModule],
   providers: [PairingService, TelegramService],
   exports: [TelegramService, PairingService],
 })

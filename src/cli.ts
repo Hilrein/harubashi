@@ -4,9 +4,9 @@ import { Logger } from '@nestjs/common';
 import * as readline from 'readline';
 import { AppModule } from './app.module';
 import { AgentProcessorService } from './agent/agent.processor';
-import { PrismaService } from './prisma/prisma.service';
+import { SessionsService } from './sessions/sessions.service';
 import { CliInteractionAdapter } from './common/adapters/cli-interaction.adapter';
-import { DEFAULT_SESSION_ID, DEFAULT_USER_ID, DEFAULT_USER_NAME } from './common/constants';
+import { DEFAULT_SESSION_ID, DEFAULT_USER_ID } from './common/constants';
 
 async function bootstrap() {
   const logger = new Logger('CLI');
@@ -17,29 +17,11 @@ async function bootstrap() {
   });
 
   const processor = app.get(AgentProcessorService);
-  const prisma = app.get(PrismaService);
+  const sessions = app.get(SessionsService);
 
-  // ── Ensure a default user exists (shared with Telegram daemon) ──
-  await prisma.user.upsert({
-    where: { id: DEFAULT_USER_ID },
-    update: {},
-    create: {
-      id: DEFAULT_USER_ID,
-      name: DEFAULT_USER_NAME,
-    },
-  });
-
-  // ── Ensure a default session exists ────────────────────────
-  await prisma.chatSession.upsert({
-    where: { id: DEFAULT_SESSION_ID },
-    update: { userId: DEFAULT_USER_ID },
-    create: {
-      id: DEFAULT_SESSION_ID,
-      userId: DEFAULT_USER_ID,
-      title: DEFAULT_SESSION_ID,
-      status: 'ACTIVE',
-    },
-  });
+  // ── Ensure default user + session exist (shared with Telegram daemon) ──
+  await sessions.ensureDefaultUser();
+  await sessions.ensureDefaultSession();
 
   // ── Mutable session pointer ────────────────────────────────
   let currentSessionId = DEFAULT_SESSION_ID;
@@ -69,16 +51,7 @@ async function bootstrap() {
       return;
     }
 
-    await prisma.chatSession.upsert({
-      where: { id: name },
-      update: { userId: DEFAULT_USER_ID },
-      create: {
-        id: name,
-        userId: DEFAULT_USER_ID,
-        title: name,
-        status: 'ACTIVE',
-      },
-    });
+    await sessions.switchOrCreate(DEFAULT_USER_ID, name);
 
     currentSessionId = name;
     console.log(
@@ -93,9 +66,7 @@ async function bootstrap() {
       return;
     }
 
-    const session = await prisma.chatSession.findUnique({
-      where: { id: name },
-    });
+    const session = await sessions.getSession(name);
 
     if (!session) {
       console.log(
@@ -112,18 +83,15 @@ async function bootstrap() {
   }
 
   async function handleSessions(): Promise<void> {
-    const sessions = await prisma.chatSession.findMany({
-      select: { id: true, title: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const list = await sessions.listSessions(DEFAULT_USER_ID);
 
-    if (sessions.length === 0) {
+    if (list.length === 0) {
       console.log('\x1b[90m(no sessions)\x1b[0m');
       return;
     }
 
-    console.log('\x1b[36m── Sessions ──────────────────────────────\x1b[0m');
-    for (const s of sessions) {
+    console.log('\x1b[36m── Sessions ──────────────────────────\x1b[0m');
+    for (const s of list) {
       const marker = s.id === currentSessionId ? ' \x1b[32m→ (current)\x1b[0m' : '';
       const date = s.updatedAt.toLocaleString();
       console.log(`  ${s.id}  \x1b[90m${date}\x1b[0m${marker}`);

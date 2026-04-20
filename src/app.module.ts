@@ -6,6 +6,7 @@ import { SkillsModule } from './skills/skills.module';
 import { SoulModule } from './soul/soul.module';
 import { LlmModule } from './llm/llm.module';
 import { AgentModule } from './agent/agent.module';
+import { SessionsModule } from './sessions/sessions.module';
 import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { TelegramModule } from './telegram/telegram.module';
     SoulModule,
     LlmModule,
     AgentModule,
+    SessionsModule,
     TelegramModule,
   ],
 })

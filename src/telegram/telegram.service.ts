@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
-import { PrismaService } from '../prisma/prisma.service';
 import { AgentProcessorService } from '../agent/agent.processor';
+import { SessionsService } from '../sessions/sessions.service';
 import { PairingService } from './pairing.service';
 import { TelegramInteractionAdapter } from './telegram-interaction.adapter';
 import { DEFAULT_USER_ID } from '../common/constants';
@@ -26,8 +26,8 @@ export class TelegramService {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService,
     private readonly processor: AgentProcessorService,
+    private readonly sessions: SessionsService,
     private readonly pairing: PairingService,
   ) {}
 
@@ -148,16 +148,7 @@ export class TelegramService {
       return;
     }
 
-    await this.prisma.chatSession.upsert({
-      where: { id: name },
-      update: { userId: DEFAULT_USER_ID },
-      create: {
-        id: name,
-        userId: DEFAULT_USER_ID,
-        title: name,
-        status: 'ACTIVE',
-      },
-    });
+    await this.sessions.switchOrCreate(DEFAULT_USER_ID, name);
 
     this.sessionMap.set(chatId, name);
     await ctx.reply(`✅ Switched to session: "${name}".`);
@@ -169,10 +160,7 @@ export class TelegramService {
     const chatId: number = ctx.chat.id;
     const currentSessionId = this.sessionMap.get(chatId) ?? `tg-${chatId}`;
 
-    const sessions = await this.prisma.chatSession.findMany({
-      select: { id: true, updatedAt: true },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const sessions = await this.sessions.listSessions(DEFAULT_USER_ID);
 
     if (sessions.length === 0) {
       await ctx.reply('No sessions found.');
@@ -201,9 +189,7 @@ export class TelegramService {
       return;
     }
 
-    const session = await this.prisma.chatSession.findUnique({
-      where: { id: name },
-    });
+    const session = await this.sessions.getSession(name);
 
     if (!session) {
       await ctx.reply(
@@ -330,17 +316,11 @@ export class TelegramService {
     if (existing) return existing;
 
     const sessionId = `tg-${chatId}`;
-
-    await this.prisma.chatSession.upsert({
-      where: { id: sessionId },
-      update: { userId: DEFAULT_USER_ID },
-      create: {
-        id: sessionId,
-        userId: DEFAULT_USER_ID,
-        title: `Telegram ${chatId}`,
-        status: 'ACTIVE',
-      },
-    });
+    await this.sessions.ensureSession(
+      sessionId,
+      DEFAULT_USER_ID,
+      `Telegram ${chatId}`,
+    );
 
     this.sessionMap.set(chatId, sessionId);
     return sessionId;

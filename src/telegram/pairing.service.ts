@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
-import { DEFAULT_USER_ID } from '../common/constants';
+import { SessionsService } from '../sessions/sessions.service';
 
 const CODE_LENGTH = 9;
 const CODE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -27,7 +26,7 @@ export class PairingService {
   private readonly logger = new Logger(PairingService.name);
   private pending: PendingCode | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly sessions: SessionsService) {}
 
   // ── Public API ──────────────────────────────────────────
 
@@ -78,11 +77,8 @@ export class PairingService {
       return false;
     }
 
-    // Persist the link
-    await this.prisma.user.update({
-      where: { id: DEFAULT_USER_ID },
-      data: { telegramId },
-    });
+    // Persist the link via SessionsService (business-logic boundary)
+    await this.sessions.setTelegramPairing(telegramId);
 
     this.pending = null;
     this.logger.log(`Paired successfully with Telegram user ${telegramId}`);
@@ -91,13 +87,11 @@ export class PairingService {
 
   /**
    * Check whether a default user already has a Telegram ID linked.
-   * Returns the stored `telegramId` or `null`.
+   * Thin wrapper — delegates to SessionsService so TelegramService can
+   * keep a single dependency on PairingService for the pairing lifecycle.
    */
   async getPairedTelegramId(): Promise<string | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: DEFAULT_USER_ID },
-    });
-    return user?.telegramId ?? null;
+    return this.sessions.getPairedTelegramId();
   }
 
   /**
