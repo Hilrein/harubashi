@@ -6,10 +6,7 @@ import { AppModule } from './app.module';
 import { AgentProcessorService } from './agent/agent.processor';
 import { PrismaService } from './prisma/prisma.service';
 import { CliInteractionAdapter } from './common/adapters/cli-interaction.adapter';
-
-const SESSION_ID = 'cli-test-session';
-const DEFAULT_USER_ID = 'default';
-const DEFAULT_USER_NAME = 'Harunauts';
+import { DEFAULT_SESSION_ID, DEFAULT_USER_ID, DEFAULT_USER_NAME } from './common/constants';
 
 async function bootstrap() {
   const logger = new Logger('CLI');
@@ -32,19 +29,25 @@ async function bootstrap() {
     },
   });
 
-  // ── Ensure a test session exists and is linked to the default user ──
+  // ── Ensure a default session exists ────────────────────────
   await prisma.chatSession.upsert({
-    where: { id: SESSION_ID },
+    where: { id: DEFAULT_SESSION_ID },
     update: { userId: DEFAULT_USER_ID },
     create: {
-      id: SESSION_ID,
+      id: DEFAULT_SESSION_ID,
       userId: DEFAULT_USER_ID,
-      title: 'CLI Test Session',
+      title: DEFAULT_SESSION_ID,
       status: 'ACTIVE',
     },
   });
 
-  logger.log('Harubashi CLI ready. Type your message or "exit" to quit.\n');
+  // ── Mutable session pointer ────────────────────────────────
+  let currentSessionId = DEFAULT_SESSION_ID;
+
+  logger.log(
+    `Harubashi CLI ready. Session: "${currentSessionId}"\n` +
+      `  Commands: /new <name> | /switch <name> | /sessions | exit\n`,
+  );
 
   // ── Interactive REPL ─────────────────────────────────────
   const rl = readline.createInterface({
@@ -57,8 +60,81 @@ async function bootstrap() {
   // around approval prompts so stdin is never contested.
   const adapter = new CliInteractionAdapter(rl);
 
+  // ── CLI command handlers ─────────────────────────────────
+
+  async function handleNew(arg: string): Promise<void> {
+    const name = arg.trim();
+    if (!name) {
+      console.log('\x1b[33mUsage: /new <session-name>\x1b[0m');
+      return;
+    }
+
+    await prisma.chatSession.upsert({
+      where: { id: name },
+      update: { userId: DEFAULT_USER_ID },
+      create: {
+        id: name,
+        userId: DEFAULT_USER_ID,
+        title: name,
+        status: 'ACTIVE',
+      },
+    });
+
+    currentSessionId = name;
+    console.log(
+      `\x1b[32m[CLI] Switched to session: "${name}". Context is now fresh (or loaded from existing session).\x1b[0m`,
+    );
+  }
+
+  async function handleSwitch(arg: string): Promise<void> {
+    const name = arg.trim();
+    if (!name) {
+      console.log('\x1b[33mUsage: /switch <session-name>\x1b[0m');
+      return;
+    }
+
+    const session = await prisma.chatSession.findUnique({
+      where: { id: name },
+    });
+
+    if (!session) {
+      console.log(
+        `\x1b[31m[CLI] No session named "${name}". Use /sessions to list or /new <name> to create.\x1b[0m`,
+      );
+      return;
+    }
+
+    currentSessionId = name;
+    const lastActive = session.updatedAt.toLocaleString();
+    console.log(
+      `\x1b[32m[CLI] Switched to "${name}". Last active: ${lastActive}\x1b[0m`,
+    );
+  }
+
+  async function handleSessions(): Promise<void> {
+    const sessions = await prisma.chatSession.findMany({
+      select: { id: true, title: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (sessions.length === 0) {
+      console.log('\x1b[90m(no sessions)\x1b[0m');
+      return;
+    }
+
+    console.log('\x1b[36m── Sessions ──────────────────────────────\x1b[0m');
+    for (const s of sessions) {
+      const marker = s.id === currentSessionId ? ' \x1b[32m→ (current)\x1b[0m' : '';
+      const date = s.updatedAt.toLocaleString();
+      console.log(`  ${s.id}  \x1b[90m${date}\x1b[0m${marker}`);
+    }
+    console.log('\x1b[36m──────────────────────────────────────────\x1b[0m');
+  }
+
+  // ── REPL loop ────────────────────────────────────────────
+
   const prompt = () => {
-    rl.question('\x1b[36mHarubashi >\x1b[0m ', async (input) => {
+    rl.question(`\x1b[36m[${currentSessionId}] >\x1b[0m `, async (input) => {
       const trimmed = input.trim();
 
       if (!trimmed) {
@@ -66,15 +142,46 @@ async function bootstrap() {
         return;
       }
 
-      if (trimmed.toLowerCase() === 'exit' || trimmed.toLowerCase() === 'quit') {
+      const lower = trimmed.toLowerCase();
+
+      if (lower === 'exit' || lower === 'quit') {
         logger.log('Shutting down...');
         rl.close();
         await app.close();
         process.exit(0);
       }
 
+      // ── Slash commands ───────────────────────────────────
+      if (trimmed.startsWith('/')) {
+        const spaceIdx = trimmed.indexOf(' ');
+        const cmd = (spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)).toLowerCase();
+        const arg = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx + 1);
+
+        try {
+          switch (cmd) {
+            case '/new':
+              await handleNew(arg);
+              break;
+            case '/switch':
+              await handleSwitch(arg);
+              break;
+            case '/sessions':
+              await handleSessions();
+              break;
+            default:
+              console.log(`\x1b[33mUnknown command: ${cmd}. Available: /new /switch /sessions\x1b[0m`);
+          }
+        } catch (err) {
+          console.error(`\x1b[31m[CLI] Command error: ${err.message}\x1b[0m`);
+        }
+
+        prompt();
+        return;
+      }
+
+      // ── Agent call ───────────────────────────────────────
       try {
-        const result = await processor.process(SESSION_ID, trimmed, adapter);
+        const result = await processor.process(currentSessionId, trimmed, adapter);
 
         // ── Print result ─────────────────────────────────────
         console.log();

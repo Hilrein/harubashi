@@ -16,8 +16,7 @@ import {
 } from '../common/types/message.types';
 import { isToolUseBlock, isThinkingBlock, isRedactedThinkingBlock } from '../common/utils/type-guards';
 import { IInteractionAdapter } from '../common/adapters/interaction-adapter.interface';
-
-const DEFAULT_USER_NAME = 'Harunauts';
+import { DEFAULT_USER_NAME } from '../common/constants';
 
 const MAX_ITERATIONS = 10;
 
@@ -58,8 +57,8 @@ export class AgentProcessorService {
       { type: ContentBlockType.Text, text: userMessage } as TextBlock,
     ]);
 
-    // ── 3. Load full conversation history ──────────────────
-    const conversationHistory = await this.loadHistory(taskId);
+    // ── 3. Load full conversation history (session-wide) ───
+    const conversationHistory = await this.loadHistory(sessionId);
 
     // ── 4. Build context ───────────────────────────────────
     const skillInstructions = this.skills.getSkillInstructions();
@@ -324,9 +323,9 @@ export class AgentProcessorService {
     });
   }
 
-  private async loadHistory(taskId: string): Promise<LlmMessage[]> {
+  private async loadHistory(sessionId: string): Promise<LlmMessage[]> {
     const dbMessages = await this.prisma.message.findMany({
-      where: { taskId },
+      where: { task: { sessionId } },
       orderBy: { createdAt: 'asc' },
     });
 

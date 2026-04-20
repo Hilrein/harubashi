@@ -6,6 +6,7 @@ import { SkillsModule } from './skills/skills.module';
 import { SoulModule } from './soul/soul.module';
 import { LlmModule } from './llm/llm.module';
 import { AgentModule } from './agent/agent.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AgentModule } from './agent/agent.module';
     SoulModule,
     LlmModule,
     AgentModule,
+    TelegramModule,
   ],
 })
 export class AppModule {}

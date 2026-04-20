@@ -16,7 +16,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "cli": "ts-node -r tsconfig-paths/register src/cli.ts",
-    "cli:build": "nest build && node dist/cli.js"
+    "cli:build": "nest build && node dist/cli.js",
+    "daemon": "ts-node -r tsconfig-paths/register src/daemon.ts",
+    "daemon:build": "nest build && node dist/daemon.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
@@ -35,7 +37,8 @@
     "gray-matter": "^4.0.3",
     "openai": "^6.33.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "telegraf": "^4.16.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
