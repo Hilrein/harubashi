@@ -4,6 +4,7 @@ import { AnthropicProvider } from './anthropic/anthropic.provider';
 import { OpenAiProvider } from './openai/openai.provider';
 import { GoogleOAuthProvider } from './google/google-oauth.provider';
 import { ProxyProvider } from './proxy/proxy.provider';
+import { NvidiaProvider } from './nvidia/nvidia.provider';
 
 @Global()
 @Module({
@@ -12,6 +13,7 @@ import { ProxyProvider } from './proxy/proxy.provider';
     OpenAiProvider,
     GoogleOAuthProvider,
     ProxyProvider,
+    NvidiaProvider,
     LlmFactoryService,
   ],
   exports: [LlmFactoryService],

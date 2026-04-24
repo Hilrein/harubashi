@@ -5,8 +5,9 @@ import { AnthropicProvider } from './anthropic/anthropic.provider';
 import { OpenAiProvider } from './openai/openai.provider';
 import { GoogleOAuthProvider } from './google/google-oauth.provider';
 import { ProxyProvider } from './proxy/proxy.provider';
+import { NvidiaProvider } from './nvidia/nvidia.provider';
 
-type ProviderName = 'anthropic' | 'openai' | 'google' | 'proxy';
+type ProviderName = 'anthropic' | 'openai' | 'google' | 'proxy' | 'nvidia';
 
 @Injectable()
 export class LlmFactoryService implements OnModuleInit {
@@ -20,6 +21,7 @@ export class LlmFactoryService implements OnModuleInit {
     private readonly openAiProvider: OpenAiProvider,
     private readonly googleProvider: GoogleOAuthProvider,
     private readonly proxyProvider: ProxyProvider,
+    private readonly nvidiaProvider: NvidiaProvider,
   ) {}
 
   onModuleInit() {
@@ -46,6 +48,7 @@ export class LlmFactoryService implements OnModuleInit {
       openai: this.openAiProvider,
       google: this.googleProvider,
       proxy: this.proxyProvider,
+      nvidia: this.nvidiaProvider,
     };
 
     const provider = map[name];

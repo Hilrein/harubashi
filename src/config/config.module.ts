@@ -22,6 +22,7 @@ import * as path from 'path';
             'GOOGLE_REFRESH_TOKEN',
           ],
           proxy: ['HARUBASHI_PROXY_BASE_URL', 'HARUBASHI_PROXY_MODEL'],
+          nvidia: ['NVIDIA_API_KEY'],
         };
 
         const missing = required.filter((key) => !config[key]);

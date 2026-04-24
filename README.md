@@ -122,7 +122,7 @@ Then restart the daemon. A new pairing code will be printed.
 
 - **Runtime**: Node.js + NestJS
 - **Database**: SQLite via Prisma
-- **LLM**: Anthropic / OpenAI / Google Gemini (OAuth 2.0) / Proxy
+- **LLM**: Anthropic / OpenAI / Google Gemini (OAuth 2.0) / NVIDIA NIM / Proxy (any OpenAI-compatible endpoint)
 - **Skills**: Markdown-defined tools with frontmatter schemas
 - **Soul**: Markdown system prompts
 
