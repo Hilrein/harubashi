@@ -2,26 +2,32 @@
   "name": "harubashi",
   "version": "0.1.0",
   "description": "Harubashi — headless System Use Agent daemon",
-  "private": true,
   "license": "MIT",
+  "bin": {
+    "harubashi": "./dist/bin.js"
+  },
+  "files": [
+    "dist/**/*",
+    "prisma/schema.prisma",
+    "prisma/migrations/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "nest build",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "cli": "ts-node -r tsconfig-paths/register src/cli.ts",
-    "cli:build": "nest build && node dist/cli.js",
-    "daemon": "ts-node -r tsconfig-paths/register src/daemon.ts",
-    "daemon:build": "nest build && node dist/daemon.js"
+    "harubashi": "ts-node -r tsconfig-paths/register src/bin.ts",
+    "cli": "ts-node -r tsconfig-paths/register src/bin.ts cli",
+    "daemon": "ts-node -r tsconfig-paths/register src/bin.ts daemon",
+    "setup": "ts-node -r tsconfig-paths/register src/bin.ts setup",
+    "build:run": "nest build && node dist/bin.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
+    "@inquirer/prompts": "^8.4.2",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
@@ -33,15 +39,20 @@
     "chokidar": "^4.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
-    "google-auth-library": "^10.6.2",
+    "commander": "^14.0.3",
     "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.1",
+    "nest-winston": "^1.10.2",
     "openai": "^6.33.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "telegraf": "^4.16.3"
+    "telegraf": "^4.16.3",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
     "eslint": "^9.0.0",
     "prettier": "^3.4.0",

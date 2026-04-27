@@ -10,6 +10,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ToolDefinition } from '../common/types/tool.types';
 import { ParsedSkill, SkillFrontmatter } from './skills.types';
+import { HarubashiPaths } from '../common/paths';
+import { copyBundledSkillsTo } from './skills-bundle';
 
 @Injectable()
 export class SkillsService implements OnModuleInit, OnModuleDestroy {
@@ -19,10 +21,13 @@ export class SkillsService implements OnModuleInit, OnModuleDestroy {
   private readonly definitionsDir: string;
 
   constructor() {
-    this.definitionsDir = path.resolve(__dirname, 'definitions');
+    // Skills live exclusively in the user's global directory.
+    // Bundled definitions are copied here by `harubashi setup`.
+    this.definitionsDir = HarubashiPaths.skillsDir;
   }
 
   async onModuleInit() {
+    this.bootstrapFromBundle();
     this.loadAllSkills();
     this.startWatching();
   }
@@ -31,8 +36,15 @@ export class SkillsService implements OnModuleInit, OnModuleDestroy {
     await this.stopWatching();
   }
 
+  /**
+   * Returns LLM-callable tool definitions. Guidance-only skills (those
+   * without `input_schema` in their frontmatter) are excluded — they
+   * inform the agent via the system prompt, not the tool list.
+   */
   getTools(): ToolDefinition[] {
-    return Array.from(this.skills.values()).map((s) => s.tool);
+    return Array.from(this.skills.values())
+      .filter((s): s is ParsedSkill & { tool: ToolDefinition } => !!s.tool)
+      .map((s) => s.tool);
   }
 
   getSkill(name: string): ParsedSkill | undefined {
@@ -43,17 +55,59 @@ export class SkillsService implements OnModuleInit, OnModuleDestroy {
     return Array.from(this.skills.values());
   }
 
+  /**
+   * Build the system-prompt augmentation by concatenating the markdown
+   * body of EVERY loaded skill (both active tools and guidance-only).
+   * Active tools are labeled `## Tool: <name>`; guidance is labeled
+   * `## Guidance: <name>` so the agent can tell them apart.
+   */
   getSkillInstructions(): string {
     const parts: string[] = [];
     for (const skill of this.skills.values()) {
-      if (skill.instructions.trim()) {
-        parts.push(`## Tool: ${skill.tool.name}\n\n${skill.instructions}`);
-      }
+      if (!skill.instructions.trim()) continue;
+      const heading = skill.tool ? 'Tool' : 'Guidance';
+      parts.push(`## ${heading}: ${skill.name}\n\n${skill.instructions}`);
     }
     return parts.join('\n\n---\n\n');
   }
 
   // ── Private ─────────────────────────────────────────────
+
+  /**
+   * Self-heal step: if `~/.harubashi/skills/` is missing or empty (e.g.
+   * the user accidentally deleted it, or this is a fresh install where
+   * `setup` has not yet run), copy the bundled `.md` skills into place.
+   *
+   * Idempotent and silent on the happy path. On a broken install where
+   * the bundle source itself is missing, we log a warning and let
+   * `loadAllSkills()` proceed — the daemon will simply have zero skills,
+   * which is preferable to a hard crash.
+   */
+  private bootstrapFromBundle(): void {
+    const exists = fs.existsSync(this.definitionsDir);
+    const isEmpty =
+      exists &&
+      fs.readdirSync(this.definitionsDir).filter((f) => f.endsWith('.md'))
+        .length === 0;
+
+    if (exists && !isEmpty) return; // happy path
+
+    const reason = !exists ? 'missing' : 'empty';
+    const result = copyBundledSkillsTo(this.definitionsDir);
+
+    if (result.copied === 0) {
+      this.logger.warn(
+        `Skills directory was ${reason} and no bundled skills were found at ${result.src}. ` +
+          `The agent will boot with zero skills.`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Auto-healed skills from bundled package (${result.copied} file(s)) ` +
+        `into ${this.definitionsDir}`,
+    );
+  }
 
   private loadAllSkills(): void {
     if (!fs.existsSync(this.definitionsDir)) {
@@ -71,7 +125,12 @@ export class SkillsService implements OnModuleInit, OnModuleDestroy {
       this.loadSkillFile(path.join(this.definitionsDir, file));
     }
 
-    this.logger.log(`Loaded ${this.skills.size} skill(s): [${Array.from(this.skills.keys()).join(', ')}]`);
+    const tools = Array.from(this.skills.values()).filter((s) => s.tool).length;
+    const guidance = this.skills.size - tools;
+    this.logger.log(
+      `Loaded ${this.skills.size} skill(s): ${tools} tool(s) + ${guidance} guidance ` +
+        `[${Array.from(this.skills.keys()).join(', ')}]`,
+    );
   }
 
   private loadSkillFile(filePath: string): void {
@@ -80,31 +139,39 @@ export class SkillsService implements OnModuleInit, OnModuleDestroy {
       const { data, content } = matter(raw);
       const frontmatter = data as SkillFrontmatter;
 
-      if (!frontmatter.name || !frontmatter.description || !frontmatter.input_schema) {
+      if (!frontmatter.name || !frontmatter.description) {
         this.logger.warn(
-          `Skill file "${filePath}" is missing required frontmatter fields (name, description, input_schema). Skipping.`,
+          `Skill file "${filePath}" is missing required frontmatter fields (name, description). Skipping.`,
         );
         return;
       }
 
-      const tool: ToolDefinition = {
-        name: frontmatter.name,
-        description: frontmatter.description,
-        input_schema: {
-          type: 'object',
-          properties: frontmatter.input_schema.properties || {},
-          required: frontmatter.input_schema.required,
-        },
-      };
+      // `input_schema` is optional. Skills without it become guidance-only:
+      // their body augments the system prompt but no LLM tool is registered.
+      const tool: ToolDefinition | undefined = frontmatter.input_schema
+        ? {
+            name: frontmatter.name,
+            description: frontmatter.description,
+            input_schema: {
+              type: 'object',
+              properties: frontmatter.input_schema.properties || {},
+              required: frontmatter.input_schema.required,
+            },
+          }
+        : undefined;
 
       const skill: ParsedSkill = {
+        name: frontmatter.name,
         tool,
         instructions: content.trim(),
         filePath,
       };
 
       this.skills.set(frontmatter.name, skill);
-      this.logger.debug(`Loaded skill: ${frontmatter.name} from ${path.basename(filePath)}`);
+      const kind = tool ? 'tool' : 'guidance';
+      this.logger.debug(
+        `Loaded ${kind}: ${frontmatter.name} from ${path.basename(filePath)}`,
+      );
     } catch (err) {
       this.logger.error(`Failed to parse skill file "${filePath}": ${err.message}`);
     }

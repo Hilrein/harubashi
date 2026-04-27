@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ILlmProvider } from './llm.interface';
 import { AnthropicProvider } from './anthropic/anthropic.provider';
 import { OpenAiProvider } from './openai/openai.provider';
-import { GoogleOAuthProvider } from './google/google-oauth.provider';
+import { GoogleProvider } from './google/google.provider';
 import { ProxyProvider } from './proxy/proxy.provider';
 import { NvidiaProvider } from './nvidia/nvidia.provider';
 
@@ -19,7 +19,7 @@ export class LlmFactoryService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly anthropicProvider: AnthropicProvider,
     private readonly openAiProvider: OpenAiProvider,
-    private readonly googleProvider: GoogleOAuthProvider,
+    private readonly googleProvider: GoogleProvider,
     private readonly proxyProvider: ProxyProvider,
     private readonly nvidiaProvider: NvidiaProvider,
   ) {}

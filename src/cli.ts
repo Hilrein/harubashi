@@ -7,14 +7,16 @@ import { AgentProcessorService } from './agent/agent.processor';
 import { SessionsService } from './sessions/sessions.service';
 import { CliInteractionAdapter } from './common/adapters/cli-interaction.adapter';
 import { DEFAULT_SESSION_ID, DEFAULT_USER_ID } from './common/constants';
+import { createHarubashiLogger } from './common/logger';
 
-async function bootstrap() {
-  const logger = new Logger('CLI');
-
+export async function runCli(): Promise<void> {
   // ── Boot NestJS in standalone mode (no HTTP) ─────────────
+  // Winston handles both colored console output and JSON file logs.
   const app = await NestFactory.createApplicationContext(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    logger: createHarubashiLogger({ appName: 'Harubashi' }),
   });
+
+  const logger = new Logger('CLI');
 
   const processor = app.get(AgentProcessorService);
   const sessions = app.get(SessionsService);
@@ -179,7 +181,9 @@ async function bootstrap() {
   prompt();
 }
 
-bootstrap().catch((err) => {
-  console.error('Fatal error during CLI bootstrap:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  runCli().catch((err) => {
+    console.error('Fatal error during CLI bootstrap:', err);
+    process.exit(1);
+  });
+}

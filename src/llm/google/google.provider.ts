@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OAuth2Client } from 'google-auth-library';
 import {
   ILlmProvider,
   LlmMessage,
@@ -16,45 +15,30 @@ import {
 } from '../../common/types/message.types';
 
 /**
- * Google Gemini provider using OAuth 2.0 for authentication.
+ * Google Gemini provider authenticated with a Google AI Studio API key.
  *
- * Authenticates via OAuth 2.0 (client_id + client_secret + refresh_token)
- * to leverage the user's personal Google account quota instead of a paid API key.
- *
- * Required env vars:
- *   GOOGLE_CLIENT_ID
- *   GOOGLE_CLIENT_SECRET
- *   GOOGLE_REFRESH_TOKEN
- *   GOOGLE_GEMINI_MODEL (optional, defaults to gemini-3-flash-preview)
+ * Required config:
+ *   profiles.<active>.providers.google.apiKey   (mapped to GOOGLE_API_KEY)
+ *   profiles.<active>.providers.google.model    (optional, mapped to GOOGLE_GEMINI_MODEL)
  */
 
 const DEFAULT_MODEL = 'gemini-3-flash-preview';
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const GEMINI_BASE_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models';
 
 // ── Gemini REST API types ─────────────────────────────────
 
 interface GeminiTextPart {
   text: string;
-  thoughtSignature?: string;
 }
 interface GeminiFunctionCallPart {
-  functionCall: {
-    name: string;
-    args: Record<string, unknown>;
-  };
-  thoughtSignature?: string;
+  functionCall: { name: string; args: Record<string, unknown> };
 }
 interface GeminiFunctionResponsePart {
-  functionResponse: {
-    name: string;
-    response: Record<string, unknown>;
-  };
+  functionResponse: { name: string; response: Record<string, unknown> };
 }
 interface GeminiInlineDataPart {
-  inlineData: {
-    mimeType: string;
-    data: string;
-  };
+  inlineData: { mimeType: string; data: string };
 }
 type GeminiPart =
   | GeminiTextPart
@@ -97,36 +81,21 @@ interface GeminiResponse {
 }
 
 @Injectable()
-export class GoogleOAuthProvider implements ILlmProvider {
-  private readonly logger = new Logger(GoogleOAuthProvider.name);
-  private readonly oauthClient: OAuth2Client | null;
+export class GoogleProvider implements ILlmProvider {
+  private readonly logger = new Logger(GoogleProvider.name);
+  private readonly apiKey: string | undefined;
   private readonly model: string;
-  private readonly hasCredentials: boolean;
 
-  constructor(private readonly configService: ConfigService) {
-    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
-    const refreshToken = this.configService.get<string>('GOOGLE_REFRESH_TOKEN');
+  constructor(configService: ConfigService) {
+    this.apiKey = configService.get<string>('GOOGLE_API_KEY');
     this.model =
-      this.configService.get<string>('GOOGLE_GEMINI_MODEL') || DEFAULT_MODEL;
+      configService.get<string>('GOOGLE_GEMINI_MODEL') || DEFAULT_MODEL;
 
-    this.hasCredentials = !!(clientId && clientSecret && refreshToken);
-
-    if (!this.hasCredentials) {
-      this.logger.warn(
-        'Google OAuth credentials (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN) are not fully set.',
-      );
-      this.oauthClient = null;
-      return;
+    if (!this.apiKey) {
+      this.logger.warn('GOOGLE_API_KEY is not set.');
+    } else {
+      this.logger.log(`GoogleProvider initialized for model "${this.model}"`);
     }
-
-    this.oauthClient = new OAuth2Client({
-      clientId,
-      clientSecret,
-    });
-    this.oauthClient.setCredentials({ refresh_token: refreshToken });
-
-    this.logger.log(`GoogleOAuthProvider initialized for model "${this.model}"`);
   }
 
   async generateResponse(
@@ -135,13 +104,12 @@ export class GoogleOAuthProvider implements ILlmProvider {
     tools: ToolDefinition[],
     signal?: AbortSignal,
   ): Promise<LlmResponse> {
-    if (!this.oauthClient) {
+    if (!this.apiKey) {
       throw new Error(
-        'GoogleOAuthProvider is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN.',
+        'GoogleProvider is not configured. Set providers.google.apiKey in ~/.harubashi/config.yaml.',
       );
     }
 
-    const accessToken = await this.getAccessToken();
     const body = this.buildRequestBody(systemPrompt, messages, tools);
     const url = `${GEMINI_BASE_URL}/${this.model}:generateContent`;
 
@@ -152,7 +120,7 @@ export class GoogleOAuthProvider implements ILlmProvider {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        'x-goog-api-key': this.apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -178,27 +146,6 @@ export class GoogleOAuthProvider implements ILlmProvider {
   }
 
   // ══════════════════════════════════════════════════════════
-  // ── OAuth ────────────────────────────────────────────────
-  // ══════════════════════════════════════════════════════════
-
-  private async getAccessToken(): Promise<string> {
-    if (!this.oauthClient) {
-      throw new Error('OAuth client not initialized');
-    }
-
-    const { token } = await this.oauthClient.getAccessToken();
-
-    if (!token) {
-      throw new Error(
-        'Failed to obtain access token from Google OAuth. ' +
-          'Verify GOOGLE_REFRESH_TOKEN is valid and has the required scopes.',
-      );
-    }
-
-    return token;
-  }
-
-  // ══════════════════════════════════════════════════════════
   // ── Outgoing: LlmMessage[] → Gemini request ──────────────
   // ══════════════════════════════════════════════════════════
 
@@ -207,8 +154,7 @@ export class GoogleOAuthProvider implements ILlmProvider {
     messages: LlmMessage[],
     tools: ToolDefinition[],
   ): GeminiRequestBody {
-    // Index ToolUseBlock IDs → tool names so we can rebuild
-    // Gemini's `functionResponse.name` from our `tool_use_id`.
+    // Index ToolUseBlock IDs → tool names for functionResponse mapping.
     const toolUseIdToName = new Map<string, string>();
     for (const msg of messages) {
       for (const block of msg.content) {
@@ -226,9 +172,7 @@ export class GoogleOAuthProvider implements ILlmProvider {
     const body: GeminiRequestBody = { contents };
 
     if (systemPrompt?.trim()) {
-      body.systemInstruction = {
-        parts: [{ text: systemPrompt }],
-      };
+      body.systemInstruction = { parts: [{ text: systemPrompt }] };
     }
 
     if (tools.length > 0) {
@@ -272,30 +216,19 @@ export class GoogleOAuthProvider implements ILlmProvider {
     toolUseIdToName: Map<string, string>,
   ): GeminiPart | null {
     switch (block.type) {
-      case ContentBlockType.Text: {
-        const tb = block as TextBlock;
-        const part: GeminiTextPart = { text: tb.text };
-        if (tb.thoughtSignature) part.thoughtSignature = tb.thoughtSignature;
-        return part;
-      }
+      case ContentBlockType.Text:
+        return { text: (block as TextBlock).text };
 
       case ContentBlockType.ToolUse: {
         const tu = block as ToolUseBlock;
-        const part: GeminiFunctionCallPart = {
-          functionCall: {
-            name: tu.name,
-            args: tu.input,
-          },
+        return {
+          functionCall: { name: tu.name, args: tu.input },
         };
-        if (tu.thoughtSignature) part.thoughtSignature = tu.thoughtSignature;
-        return part;
       }
 
       case ContentBlockType.ToolResult: {
         const tr = block as ToolResultBlock;
         const name = toolUseIdToName.get(tr.tool_use_id) || 'unknown_tool';
-
-        // Gemini expects `response` to be an object — wrap text output
         const flatText = tr.content
           .filter((c) => c.type === ContentBlockType.Text)
           .map((c) => (c as TextBlock).text)
@@ -304,9 +237,7 @@ export class GoogleOAuthProvider implements ILlmProvider {
         return {
           functionResponse: {
             name,
-            response: tr.is_error
-              ? { error: flatText }
-              : { output: flatText },
+            response: tr.is_error ? { error: flatText } : { output: flatText },
           },
         };
       }
@@ -321,7 +252,7 @@ export class GoogleOAuthProvider implements ILlmProvider {
         };
       }
 
-      // Thinking blocks have no Gemini equivalent — skip them
+      // Thinking blocks have no Gemini equivalent.
       case ContentBlockType.Thinking:
       case ContentBlockType.RedactedThinking:
       default:
@@ -341,33 +272,23 @@ export class GoogleOAuthProvider implements ILlmProvider {
 
     for (const part of parts) {
       if ('text' in part && part.text) {
-        const textBlock: TextBlock = {
+        blocks.push({
           type: ContentBlockType.Text,
           text: part.text,
-        };
-        if (part.thoughtSignature) {
-          textBlock.thoughtSignature = part.thoughtSignature;
-        }
-        blocks.push(textBlock);
+        } as TextBlock);
       } else if ('functionCall' in part && part.functionCall) {
         callCounter++;
-        const toolBlock: ToolUseBlock = {
+        blocks.push({
           type: ContentBlockType.ToolUse,
           // Gemini does not return IDs for function calls — synthesize one.
-          // Embedding the tool name keeps lookups robust on the next turn.
           id: `gemini_${part.functionCall.name}_${callCounter}_${Date.now()}`,
           name: part.functionCall.name,
           input: part.functionCall.args || {},
-        };
-        if (part.thoughtSignature) {
-          toolBlock.thoughtSignature = part.thoughtSignature;
-        }
-        blocks.push(toolBlock);
+        } as ToolUseBlock);
       }
     }
 
     if (blocks.length === 0) {
-      // Defensive fallback — never return an empty response
       blocks.push({
         type: ContentBlockType.Text,
         text: candidate?.finishReason
