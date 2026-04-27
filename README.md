@@ -1,4 +1,4 @@
-🌍 **Read in:** [English](README.md) | [Русский](README.ru.md)
+🌍 **Read in:** [English](https://github.com/Hilrein/harubashi/blob/main/README.md) | [Русский](https://github.com/Hilrein/harubashi/blob/main/README.ru.md)
 
 # 🌉 Harubashi
 
