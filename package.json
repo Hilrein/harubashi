@@ -2,7 +2,7 @@
   "name": "harubashi",
   "version": "0.1.0",
   "description": "Harubashi — headless System Use Agent daemon",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "bin": {
     "harubashi": "./dist/bin.js"
   },
@@ -24,7 +24,9 @@
     "cli": "ts-node -r tsconfig-paths/register src/bin.ts cli",
     "daemon": "ts-node -r tsconfig-paths/register src/bin.ts daemon",
     "setup": "ts-node -r tsconfig-paths/register src/bin.ts setup",
-    "build:run": "nest build && node dist/bin.js"
+    "build:run": "nest build && node dist/bin.js",
+    "postinstall": "prisma generate",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
