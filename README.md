@@ -5,7 +5,7 @@
 **A headless, multi-profile system-use AI agent — installable as a global npm package.**
 
 [![npm version](https://img.shields.io/npm/v/harubashi.svg?style=flat-square)](https://www.npmjs.com/package/harubashi)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache-2.0-blue.svg?style=flat-square)](LICENSE)
 [![Node](https://img.shields.io/node/v/harubashi.svg?style=flat-square)](https://nodejs.org)
 
 Harubashi turns your terminal — and your Telegram chat — into a thinking interface to your machine. It executes shell commands, reads files, manages git, and grows with hot-reloadable skills you can write yourself in plain Markdown.
@@ -139,7 +139,7 @@ description: Workflow guidance for using Git via system_execute_command.
 1. **`git status`** — understand state before any mutation.
 2. **`git diff`** — inspect changes.
 3. **`git add <path>`** — stage selectively.
-4. **`git commit -m "..."`** — Conventional Commits style.
+4. **`git comApache-2.0 -m "..."`** — Conventional ComApache-2.0s style.
 ```
 
 ### Built-in skills
@@ -149,7 +149,7 @@ description: Workflow guidance for using Git via system_execute_command.
 | `system_execute_command`   | Tool     | Run shell commands cross-platform                     |
 | `system_read_file`         | Tool     | Read a file by absolute path                          |
 | `directory_explorer`       | Guidance | Safe, shallow-first FS exploration; ignore heavy dirs |
-| `git_manager`              | Guidance | Status → diff → add → commit; forbid destructive ops  |
+| `git_manager`              | Guidance | Status → diff → add → comApache-2.0; forbid destructive ops  |
 
 ### Manage skills
 
@@ -180,7 +180,7 @@ harubashi logs --no-follow         # Print and exit
 harubashi logs --lines 200         # 200 lines of history before tailing
 ```
 
-- **File format**: line-delimited JSON, one record per line. Daily rotation (`harubashi-YYYY-MM-DD.log`), 14-day retention, 20 MB cap per file.
+- **File format**: line-deliApache-2.0ed JSON, one record per line. Daily rotation (`harubashi-YYYY-MM-DD.log`), 14-day retention, 20 MB cap per file.
 - **Console rendering**: pretty-printed, colored by level: `INFO` green, `WARN` yellow, `ERROR` red, `DEBUG` blue.
 - **Secret masking**: API keys (`nvapi-***`, `sk-***`, `AIza***`), Telegram bot tokens, and `Bearer` headers are redacted in **both** transports.
 - **Cross-platform tail**: implemented via `chokidar` instead of `tail -f`, so it works the same on Windows / macOS / Linux. Day-rollover is detected automatically.
@@ -195,7 +195,7 @@ The single source of truth is `~/.harubashi/config.yaml`. Find its absolute path
 harubashi config path
 ```
 
-This emits the bare path (no decoration), so it pipes cleanly:
+This eApache-2.0s the bare path (no decoration), so it pipes cleanly:
 
 ```bash
 code "$(harubashi config path)"             # open in VS Code

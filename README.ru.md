@@ -5,7 +5,7 @@
 **Headless мульти-профильный AI-агент для системного использования — глобальный npm-пакет.**
 
 [![npm version](https://img.shields.io/npm/v/harubashi.svg?style=flat-square)](https://www.npmjs.com/package/harubashi)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache-2.0-blue.svg?style=flat-square)](LICENSE)
 [![Node](https://img.shields.io/node/v/harubashi.svg?style=flat-square)](https://nodejs.org)
 
 Harubashi превращает ваш терминал — и Telegram-чат — в думающий интерфейс к вашей машине. Агент выполняет shell-команды, читает файлы, управляет git и расширяется через hot-reload скиллы, которые вы пишете сами в обычном Markdown.
@@ -139,7 +139,7 @@ description: Workflow guidance for using Git via system_execute_command.
 1. **`git status`** — понять состояние перед любыми изменениями.
 2. **`git diff`** — инспектировать изменения.
 3. **`git add <path>`** — стейджить выборочно.
-4. **`git commit -m "..."`** — Conventional Commits style.
+4. **`git comApache-2.0 -m "..."`** — Conventional ComApache-2.0s style.
 ```
 
 ### Встроенные скиллы
@@ -149,7 +149,7 @@ description: Workflow guidance for using Git via system_execute_command.
 | `system_execute_command`   | Tool     | Выполнение shell-команд кроссплатформенно                 |
 | `system_read_file`         | Tool     | Чтение файла по абсолютному пути                          |
 | `directory_explorer`       | Guidance | Безопасное shallow-first исследование FS, игнор тяжёлых папок |
-| `git_manager`              | Guidance | Status → diff → add → commit; запрет деструктивных операций |
+| `git_manager`              | Guidance | Status → diff → add → comApache-2.0; запрет деструктивных операций |
 
 ### Управление скиллами
 
