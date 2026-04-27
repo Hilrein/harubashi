@@ -5,13 +5,13 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import * as chokidar from 'chokidar';
-import * as matter from 'gray-matter';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ToolDefinition } from '../common/types/tool.types';
-import { ParsedSkill, SkillFrontmatter } from './skills.types';
+import { ParsedSkill } from './skills.types';
 import { HarubashiPaths } from '../common/paths';
 import { copyBundledSkillsTo } from './skills-bundle';
+import { parseSkillFile } from './skills-parser';
 
 @Injectable()
 export class SkillsService implements OnModuleInit, OnModuleDestroy {
@@ -74,39 +74,41 @@ export class SkillsService implements OnModuleInit, OnModuleDestroy {
   // ── Private ─────────────────────────────────────────────
 
   /**
-   * Self-heal step: if `~/.harubashi/skills/` is missing or empty (e.g.
-   * the user accidentally deleted it, or this is a fresh install where
-   * `setup` has not yet run), copy the bundled `.md` skills into place.
+   * Additive self-heal: on every boot, ensure that every bundled skill
+   * exists in `~/.harubashi/skills/`. Files already present (including
+   * user-edited ones) are NEVER overwritten. New bundle entries shipped
+   * in a future npm version are added automatically.
    *
-   * Idempotent and silent on the happy path. On a broken install where
-   * the bundle source itself is missing, we log a warning and let
-   * `loadAllSkills()` proceed — the daemon will simply have zero skills,
-   * which is preferable to a hard crash.
+   * This guarantees:
+   *  - Fresh install / missing dir → all bundled skills are copied.
+   *  - Existing dir + new bundle skills → only the new ones are added.
+   *  - Existing dir + everything in sync → no-op, silent (debug-level only).
+   *  - Broken install (bundle source missing) → warn, continue with whatever
+   *    is already on disk; the daemon may boot with zero skills but does
+   *    not crash.
    */
   private bootstrapFromBundle(): void {
-    const exists = fs.existsSync(this.definitionsDir);
-    const isEmpty =
-      exists &&
-      fs.readdirSync(this.definitionsDir).filter((f) => f.endsWith('.md'))
-        .length === 0;
-
-    if (exists && !isEmpty) return; // happy path
-
-    const reason = !exists ? 'missing' : 'empty';
     const result = copyBundledSkillsTo(this.definitionsDir);
 
-    if (result.copied === 0) {
+    if (result.bundleMissing) {
       this.logger.warn(
-        `Skills directory was ${reason} and no bundled skills were found at ${result.src}. ` +
-          `The agent will boot with zero skills.`,
+        `Bundled skills directory not found at ${result.src}. ` +
+          `Auto-heal disabled; the agent will use only what is currently in ` +
+          `${this.definitionsDir}.`,
       );
       return;
     }
 
-    this.logger.log(
-      `Auto-healed skills from bundled package (${result.copied} file(s)) ` +
-        `into ${this.definitionsDir}`,
-    );
+    if (result.added.length > 0) {
+      this.logger.log(
+        `Auto-heal: added ${result.added.length} bundled skill(s) → ` +
+          `[${result.added.join(', ')}] (${result.kept.length} existing skill(s) preserved)`,
+      );
+    } else {
+      this.logger.debug(
+        `Auto-heal: ${result.kept.length} bundled skill(s) already in place; nothing to add.`,
+      );
+    }
   }
 
   private loadAllSkills(): void {
@@ -134,47 +136,22 @@ export class SkillsService implements OnModuleInit, OnModuleDestroy {
   }
 
   private loadSkillFile(filePath: string): void {
-    try {
-      const raw = fs.readFileSync(filePath, 'utf-8');
-      const { data, content } = matter(raw);
-      const frontmatter = data as SkillFrontmatter;
+    const result = parseSkillFile(filePath);
 
-      if (!frontmatter.name || !frontmatter.description) {
-        this.logger.warn(
-          `Skill file "${filePath}" is missing required frontmatter fields (name, description). Skipping.`,
-        );
-        return;
-      }
-
-      // `input_schema` is optional. Skills without it become guidance-only:
-      // their body augments the system prompt but no LLM tool is registered.
-      const tool: ToolDefinition | undefined = frontmatter.input_schema
-        ? {
-            name: frontmatter.name,
-            description: frontmatter.description,
-            input_schema: {
-              type: 'object',
-              properties: frontmatter.input_schema.properties || {},
-              required: frontmatter.input_schema.required,
-            },
-          }
-        : undefined;
-
-      const skill: ParsedSkill = {
-        name: frontmatter.name,
-        tool,
-        instructions: content.trim(),
-        filePath,
-      };
-
-      this.skills.set(frontmatter.name, skill);
-      const kind = tool ? 'tool' : 'guidance';
-      this.logger.debug(
-        `Loaded ${kind}: ${frontmatter.name} from ${path.basename(filePath)}`,
+    if (result.error || !result.skill) {
+      this.logger.warn(
+        `Skill file "${filePath}" skipped: ${result.error || 'unknown error'}`,
       );
-    } catch (err) {
-      this.logger.error(`Failed to parse skill file "${filePath}": ${err.message}`);
+      return;
     }
+
+    const skill = result.skill;
+    this.skills.set(skill.name, skill);
+
+    const kind = skill.tool ? 'tool' : 'guidance';
+    this.logger.debug(
+      `Loaded ${kind}: ${skill.name} from ${path.basename(filePath)}`,
+    );
   }
 
   private removeSkillByPath(filePath: string): void {

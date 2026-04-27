@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 import 'reflect-metadata';
 import * as fs from 'fs';
+import * as path from 'path';
 import { Command } from 'commander';
 import { HarubashiPaths } from './common/paths';
+
+// Read the package version dynamically so `harubashi -V` always matches
+// what was published to npm (or what's checked out in dev). Resolved
+// relative to this file: dist/bin.js → dist/../package.json (= root).
+const pkgPath = path.resolve(__dirname, '..', 'package.json');
+const pkg: { version: string } = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
 
 const program = new Command();
 
 program
   .name('harubashi')
   .description('Headless system-use AI agent — global CLI')
-  .version('0.1.0');
+  .version(pkg.version, '-V, --version', 'output the current version');
 
 // ══════════════════════════════════════════════════════════
 // ── Helpers ──────────────────────────────────────────────
@@ -108,6 +115,63 @@ profile
     ensureConfigOrExit();
     const { runProfileEdit } = await import('./commands/profile.command');
     await runProfileEdit(name);
+  });
+
+profile
+  .command('delete <name>')
+  .description('Delete a profile (DB file + config entry); refuses the active profile')
+  .action(async (name: string) => {
+    ensureConfigOrExit();
+    const { runProfileDelete } = await import('./commands/profile.command');
+    await runProfileDelete(name);
+  });
+
+// ══════════════════════════════════════════════════════════
+// ── Skills sub-commands ──────────────────────────────────
+// ══════════════════════════════════════════════════════════
+
+const skills = program
+  .command('skills')
+  .description('Inspect installed skills (~/.harubashi/skills/)');
+
+skills
+  .command('list')
+  .description('List installed skills, grouped by Active Tools and Guidance')
+  .action(async () => {
+    const { runSkillsList } = await import('./commands/skills.command');
+    runSkillsList();
+  });
+
+skills
+  .command('open')
+  .description("Open the skills directory in the OS file manager")
+  .action(async () => {
+    const { runSkillsOpen } = await import('./commands/skills.command');
+    runSkillsOpen();
+  });
+
+// ══════════════════════════════════════════════════════════
+// ── Config sub-commands ──────────────────────────────────
+// ══════════════════════════════════════════════════════════
+
+const config = program
+  .command('config')
+  .description('Inspect the global Harubashi config');
+
+config
+  .command('path')
+  .description('Print the absolute path to config.yaml (pipeable, no decoration)')
+  .action(async () => {
+    const { runConfigPath } = await import('./commands/config.command');
+    runConfigPath();
+  });
+
+config
+  .command('edit')
+  .description('Open config.yaml in $EDITOR (or platform default text editor)')
+  .action(async () => {
+    const { runConfigEdit } = await import('./commands/config.command');
+    await runConfigEdit();
   });
 
 // ══════════════════════════════════════════════════════════

@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import { confirm } from '@inquirer/prompts';
 import { HarubashiPaths } from '../common/paths';
 import {
   getActiveProfile,
@@ -293,6 +295,123 @@ async function runEditFlow(
   );
 
   printEditFooter(name, providerName, config.activeProfile);
+}
+
+// ══════════════════════════════════════════════════════════
+// ── profile delete ───────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+
+/**
+ * Delete a profile completely:
+ *  1. Refuse if `name` is the active profile (user must `profile use <other>` first).
+ *  2. Show a confirmation prompt — destructive, irreversible.
+ *  3. Remove `~/.harubashi/databases/<name>.db` (best-effort; warn if absent).
+ *  4. Remove `profiles[name]` from `config.yaml` and persist.
+ *
+ * Refuses to delete the very last profile (config without profiles is
+ * invalid for the daemon).
+ */
+export async function runProfileDelete(name: string): Promise<void> {
+  const config = loadHarubashiConfig();
+
+  // ── 1. Existence check ────────────────────────────────
+  if (!config.profiles[name]) {
+    console.error(
+      `\x1b[31m[harubashi] Profile "${name}" does not exist.\x1b[0m`,
+    );
+    const available = Object.keys(config.profiles);
+    if (available.length > 0) {
+      console.error(
+        `\x1b[33mAvailable: ${available.join(', ')}\x1b[0m`,
+      );
+    }
+    process.exit(1);
+  }
+
+  // ── 2. Active-profile guard ───────────────────────────
+  if (config.activeProfile === name) {
+    const others = Object.keys(config.profiles).filter((p) => p !== name);
+    console.error(
+      `\x1b[31m[harubashi] Cannot delete "${name}": it is the active profile.\x1b[0m`,
+    );
+    if (others.length === 0) {
+      console.error(
+        `\x1b[33mIt is also the only profile. Re-run 'harubashi setup' to create another, then delete this one.\x1b[0m`,
+      );
+    } else {
+      console.error(`\x1b[33mSwitch to another profile first:\x1b[0m`);
+      for (const other of others) {
+        console.error(`    \x1b[32m$\x1b[0m harubashi profile use ${other}`);
+      }
+    }
+    process.exit(1);
+  }
+
+  // ── 3. Last-profile guard ─────────────────────────────
+  if (Object.keys(config.profiles).length === 1) {
+    console.error(
+      `\x1b[31m[harubashi] Cannot delete "${name}": it is the only profile in config.\x1b[0m`,
+    );
+    console.error(
+      `\x1b[33mDeleting it would leave Harubashi unusable. Create another profile first.\x1b[0m`,
+    );
+    process.exit(1);
+  }
+
+  // ── 4. Show what will happen ──────────────────────────
+  const dbPath = HarubashiPaths.databaseFile(name);
+  const dbExists = fs.existsSync(dbPath);
+
+  console.log();
+  console.log(`\x1b[33m── About to delete profile "${name}" ──────────────\x1b[0m`);
+  console.log(`  Profile entry in: \x1b[90m${HarubashiPaths.configFile}\x1b[0m`);
+  if (dbExists) {
+    console.log(`  Database file:    \x1b[90m${dbPath}\x1b[0m`);
+  } else {
+    console.log(
+      `  Database file:    \x1b[90m(none — ${dbPath} does not exist)\x1b[0m`,
+    );
+  }
+  console.log(`\x1b[31m  This action cannot be undone.\x1b[0m`);
+  console.log();
+
+  // ── 5. Confirm ────────────────────────────────────────
+  const ok = await confirm({
+    message: `Permanently delete profile "${name}"?`,
+    default: false,
+  });
+
+  if (!ok) {
+    console.log(`\x1b[90m  Cancelled. Nothing was deleted.\x1b[0m`);
+    return;
+  }
+
+  // ── 6. Delete the database file (best-effort) ─────────
+  if (dbExists) {
+    try {
+      fs.unlinkSync(dbPath);
+      console.log(`  \x1b[32m✓\x1b[0m  Removed ${dbPath}`);
+    } catch (err) {
+      console.error(
+        `  \x1b[33m⚠\x1b[0m  Could not remove ${dbPath}: ${(err as Error).message}`,
+      );
+      console.error(
+        `  \x1b[33m   Continuing — you may need to delete it manually.\x1b[0m`,
+      );
+    }
+  }
+
+  // ── 7. Remove from config and persist ─────────────────
+  delete config.profiles[name];
+  saveHarubashiConfig(config);
+  console.log(`  \x1b[32m✓\x1b[0m  Removed "${name}" from ${HarubashiPaths.configFile}`);
+
+  console.log();
+  console.log(`\x1b[32m✓\x1b[0m  Profile "${name}" deleted.`);
+  console.log(
+    `\x1b[90m  Active profile remains: ${config.activeProfile}\x1b[0m`,
+  );
+  console.log();
 }
 
 // ══════════════════════════════════════════════════════════

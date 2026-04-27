@@ -295,8 +295,11 @@ export function createDirectories(): void {
 }
 
 /**
- * Copy bundled `.md` skill definitions into the user's `~/.harubashi/skills/`.
- * Existing files are overwritten (cheap to re-run).
+ * Copy bundled `.md` skill definitions into `~/.harubashi/skills/`
+ * **additively**: skill files already present in the user's directory
+ * are preserved (so re-running `setup` never clobbers hand-edited
+ * skills). Newly-bundled skills shipped in a future npm version are
+ * landed automatically.
  *
  * Delegates the actual copy to `copyBundledSkillsTo()` (shared with the
  * `SkillsService` auto-heal path) and adds setup-flavored console output.
@@ -304,16 +307,27 @@ export function createDirectories(): void {
 export function copyBundledSkills(): void {
   const result = copyBundledSkillsTo(HarubashiPaths.skillsDir);
 
-  if (result.copied === 0) {
+  if (result.bundleMissing) {
     console.log(
       `  \x1b[33m⚠\x1b[0m  No bundled skills found at ${result.src}. Skipping.`,
     );
     return;
   }
 
-  console.log(
-    `  \x1b[32m✓\x1b[0m  Copied ${result.copied} skill(s) → ${HarubashiPaths.skillsDir}`,
-  );
+  if (result.added.length > 0 && result.kept.length === 0) {
+    console.log(
+      `  \x1b[32m✓\x1b[0m  Installed ${result.added.length} skill(s) → ${HarubashiPaths.skillsDir}`,
+    );
+  } else if (result.added.length > 0) {
+    console.log(
+      `  \x1b[32m✓\x1b[0m  Added ${result.added.length} new skill(s) ` +
+        `\x1b[90m(kept ${result.kept.length} existing)\x1b[0m → ${HarubashiPaths.skillsDir}`,
+    );
+  } else {
+    console.log(
+      `  \x1b[90m↪\x1b[0m  All ${result.kept.length} bundled skill(s) already present in ${HarubashiPaths.skillsDir}`,
+    );
+  }
 }
 
 /**
