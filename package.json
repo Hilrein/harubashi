@@ -1,7 +1,7 @@
 {
   "name": "harubashi",
   "version": "0.1.0",
-  "description": "Harubashi — headless System Use Agent daemon",
+  "description": "Your own personal headless System Use Agent daemon. Let's Haru Haru",
   "license": "Apache-2.0",
   "bin": {
     "harubashi": "./dist/bin.js"

@@ -286,7 +286,7 @@ npm run daemon          # ts-node src/bin.ts daemon
 
 ## 📄 License
 
-MIT — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE).
 
 ---
 
