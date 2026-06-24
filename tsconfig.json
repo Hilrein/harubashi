@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@harubashi/*": ["src/*"]
-    }
+    },
+    "useUnknownInCatchVariables": false
   },
   "include": ["src/**/*"],
   "exclude": [
