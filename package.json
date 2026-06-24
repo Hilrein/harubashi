@@ -1,6 +1,6 @@
 {
   "name": "harubashi",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Your own personal headless System Use Agent daemon. Let's Haru Haru",
   "license": "Apache-2.0",
   "homepage": "https://github.com/hilrein/harubashi",
@@ -10,6 +10,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "bugs": {
     "url": "https://github.com/hilrein/harubashi/issues"

@@ -5,7 +5,7 @@
 **Headless мульти-профильный AI-агент для системного использования — глобальный npm-пакет.**
 
 [![npm version](https://img.shields.io/npm/v/harubashi.svg?style=flat-square)](https://www.npmjs.com/package/harubashi)
-[![License: Apache-2.0](https://img.shields.io/badge/license-Apache-2.0-blue.svg?style=flat-square)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square)](LICENSE)
 [![Node](https://img.shields.io/node/v/harubashi.svg?style=flat-square)](https://nodejs.org)
 
 Harubashi превращает ваш терминал — и Telegram-чат — в думающий интерфейс к вашей машине. Агент выполняет shell-команды, читает файлы, управляет git и расширяется через hot-reload скиллы, которые вы пишете сами в обычном Markdown.
