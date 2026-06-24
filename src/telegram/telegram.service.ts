@@ -240,21 +240,47 @@ export class TelegramService {
    * chat permanently locked.
    */
   private async runAgent(chatId: number, text: string): Promise<void> {
+    let typingInterval: NodeJS.Timeout | undefined;
     try {
       const sessionId = await this.resolveSessionId(chatId);
       const adapter = new TelegramInteractionAdapter(this.bot!, chatId);
 
+      // Show native "typing..." chat action immediately
+      const sendTyping = async () => {
+        try {
+          await this.bot!.telegram.sendChatAction(chatId, 'typing');
+        } catch (err) {
+          this.logger.debug(`Could not send typing action: ${err.message}`);
+        }
+      };
+
+      await sendTyping();
+      // Refresh every 4 seconds to keep the "typing..." status active (expires in ~5s on Telegram)
+      typingInterval = setInterval(sendTyping, 4000);
+
       const result = await this.processor.process(sessionId, text, adapter);
+
+      if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = undefined;
+      }
 
       const reply = result.finalText || '(no text response)';
       await this.sendLongMessage(chatId, reply);
     } catch (err) {
+      if (typingInterval) {
+        clearInterval(typingInterval);
+        typingInterval = undefined;
+      }
       this.logger.error(
         `Agent error for chat ${chatId}: ${err.message}`,
         err.stack,
       );
       try {
-        await this.bot!.telegram.sendMessage(chatId, `❌ Error: ${err.message}`);
+        const escapedErr = escapeMarkdownV2(err.message);
+        await this.bot!.telegram.sendMessage(chatId, `❌ *Error:* ${escapedErr}`, {
+          parse_mode: 'MarkdownV2',
+        });
       } catch {
         // Non-fatal: chat may be unreachable.
       }
