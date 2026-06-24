@@ -12,6 +12,7 @@ harubashi
 .env
 .env.local
 .env.*.local
+.npmrc
 
 # ── Database ──────────────────────────────────────────────
 prisma/dev.db
