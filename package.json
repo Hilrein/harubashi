@@ -1,5 +1,5 @@
 {
-  "name": "@hilrein/harubashi",
+  "name": "harubashi",
   "version": "0.1.5",
   "description": "Your own personal headless System Use Agent daemon. Let's Haru Haru",
   "license": "Apache-2.0",
