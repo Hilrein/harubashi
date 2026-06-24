@@ -1,6 +1,6 @@
 {
   "name": "@hilrein/harubashi",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Your own personal headless System Use Agent daemon. Let's Haru Haru",
   "license": "Apache-2.0",
   "homepage": "https://github.com/hilrein/harubashi",
