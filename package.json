@@ -1,12 +1,15 @@
 {
-  "name": "harubashi",
+  "name": "@hilrein/harubashi",
   "version": "0.1.4",
   "description": "Your own personal headless System Use Agent daemon. Let's Haru Haru",
   "license": "Apache-2.0",
   "homepage": "https://github.com/hilrein/harubashi",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hilrein/harubashi.git"
+    "url": "git+https://github.com/hilrein/harubashi.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "bugs": {
     "url": "https://github.com/hilrein/harubashi/issues"
