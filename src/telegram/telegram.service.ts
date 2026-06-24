@@ -335,7 +335,8 @@ export class TelegramService {
     text: string,
   ): Promise<void> {
     if (text.length <= MAX_TG_MESSAGE_LENGTH) {
-      await this.bot!.telegram.sendMessage(chatId, text);
+      const formatted = markdownToTelegramMarkdownV2(text);
+      await this.bot!.telegram.sendMessage(chatId, formatted, { parse_mode: 'MarkdownV2' });
       return;
     }
 
@@ -357,7 +358,80 @@ export class TelegramService {
     }
 
     for (const chunk of chunks) {
-      await this.bot!.telegram.sendMessage(chatId, chunk);
+      const formatted = markdownToTelegramMarkdownV2(chunk);
+      await this.bot!.telegram.sendMessage(chatId, formatted, { parse_mode: 'MarkdownV2' });
     }
   }
+}
+
+/**
+ * Standalone helper to safely convert standard Markdown to Telegram's MarkdownV2.
+ * Prevents parsing errors by escaping all non-formatting special characters.
+ */
+function markdownToTelegramMarkdownV2(text: string): string {
+  const placeholders: string[] = [];
+
+  const addPlaceholder = (content: string) => {
+    const idx = placeholders.length;
+    placeholders.push(content);
+    return `PLACEHOLDERX${idx}X`;
+  };
+
+  // 1. Extract and placeholder multi-line code blocks
+  let processed = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    // Inside pre, only \ and ` need to be escaped
+    const escapedCode = code.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
+    const block = lang ? `\`\`\`${lang}\n${escapedCode}\n\`\`\`` : `\`\`\`\n${escapedCode}\n\`\`\``;
+    return addPlaceholder(block);
+  });
+
+  // 2. Extract and placeholder inline code blocks
+  processed = processed.replace(/`([^`]+)`/g, (_, code) => {
+    const escapedCode = code.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
+    return addPlaceholder(`\`${escapedCode}\``);
+  });
+
+  // 3. Extract and placeholder links
+  processed = processed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, linkText, url) => {
+    const escapedText = escapeMarkdownV2(linkText);
+    const escapedUrl = url.replace(/\\/g, '\\\\').replace(/\)/g, '\\)');
+    return addPlaceholder(`[${escapedText}](${escapedUrl})`);
+  });
+
+  // 4. Extract and placeholder bold (**text** or __text__)
+  processed = processed.replace(/\*\*([\s\S]*?)\*\*/g, (_, boldText) => {
+    const escapedBold = escapeMarkdownV2(boldText);
+    return addPlaceholder(`*${escapedBold}*`);
+  });
+  processed = processed.replace(/__([\s\S]*?)__/g, (_, boldText) => {
+    const escapedBold = escapeMarkdownV2(boldText);
+    return addPlaceholder(`*${escapedBold}*`);
+  });
+
+  // 5. Extract and placeholder italic (*text* or _text_)
+  processed = processed.replace(/\*([\s\S]*?)\*/g, (_, italicText) => {
+    const escapedItalic = escapeMarkdownV2(italicText);
+    return addPlaceholder(`_${escapedItalic}_`);
+  });
+  processed = processed.replace(/_([\s\S]*?)_/g, (_, italicText) => {
+    const escapedItalic = escapeMarkdownV2(italicText);
+    return addPlaceholder(`_${escapedItalic}_`);
+  });
+
+  // 6. Escape all special characters in the remaining text
+  processed = escapeMarkdownV2(processed);
+
+  // 7. Restore all placeholders in order
+  for (let i = 0; i < placeholders.length; i++) {
+    processed = processed.replace(`PLACEHOLDERX${i}X`, placeholders[i]);
+  }
+
+  return processed;
+}
+
+/**
+ * Escapes all special characters required by Telegram's MarkdownV2.
+ */
+function escapeMarkdownV2(str: string): string {
+  return str.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
 }

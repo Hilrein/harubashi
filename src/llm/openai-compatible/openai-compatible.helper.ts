@@ -40,6 +40,7 @@ export async function generateViaOpenAiCompatible(
       model,
       messages: chatMessages,
       tools: chatTools.length > 0 ? chatTools : undefined,
+      max_tokens: 8192,
     },
     { signal },
   );
