@@ -9,7 +9,7 @@
     "url": "git+https://github.com/hilrein/harubashi.git"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   },
   "bugs": {
     "url": "https://github.com/hilrein/harubashi/issues"
