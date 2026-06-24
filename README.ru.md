@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/harubashi.svg?style=flat-square)](https://www.npmjs.com/package/harubashi)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square)](LICENSE)
-[![Node](https://img.shields.io/node/v/harubashi.svg?style=flat-square)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg?style=flat-square)](https://nodejs.org)
 
 Harubashi превращает ваш терминал — и Telegram-чат — в думающий интерфейс к вашей машине. Агент выполняет shell-команды, читает файлы, управляет git и расширяется через hot-reload скиллы, которые вы пишете сами в обычном Markdown.
 

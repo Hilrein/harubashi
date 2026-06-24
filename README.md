@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/harubashi.svg?style=flat-square)](https://www.npmjs.com/package/harubashi)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square)](LICENSE)
-[![Node](https://img.shields.io/node/v/harubashi.svg?style=flat-square)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg?style=flat-square)](https://nodejs.org)
 
 Harubashi turns your terminal — and your Telegram chat — into a thinking interface to your machine. It executes shell commands, reads files, manages git, and grows with hot-reloadable skills you can write yourself in plain Markdown.
 
