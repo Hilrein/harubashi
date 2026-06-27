@@ -22,6 +22,7 @@
   },
   "files": [
     "dist/**/*",
+    "ui/dist/**/*",
     "prisma/schema.prisma",
     "prisma/migrations/**/*",
     "README.md",
@@ -30,6 +31,8 @@
   ],
   "scripts": {
     "build": "nest build",
+    "build:ui": "cd ui && npm run build",
+    "build:all": "npm run build:ui && npm run build",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "prisma:generate": "prisma generate",
@@ -38,9 +41,10 @@
     "cli": "ts-node -r tsconfig-paths/register src/bin.ts cli",
     "daemon": "ts-node -r tsconfig-paths/register src/bin.ts daemon",
     "setup": "ts-node -r tsconfig-paths/register src/bin.ts setup",
+    "ui": "ts-node -r tsconfig-paths/register src/bin.ts ui",
     "build:run": "nest build && node dist/bin.js",
     "postinstall": "prisma generate",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build:all"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
@@ -51,6 +55,7 @@
     "@nestjs/event-emitter": "^3.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/platform-socket.io": "^11.0.0",
+    "@nestjs/serve-static": "^5.0.5",
     "@nestjs/websockets": "^11.0.0",
     "@prisma/client": "^6.0.0",
     "chokidar": "^4.0.3",

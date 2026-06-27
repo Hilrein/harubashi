@@ -73,6 +73,16 @@ program
     await runLogs({ follow: opts.follow, lines: opts.lines });
   });
 
+program
+  .command('ui')
+  .description('Launch the graphical Web UI dashboard')
+  .option('-p, --port <port>', 'HTTP port to listen on', (v) => parseInt(v, 10))
+  .action(async (opts: { port?: number }) => {
+    ensureConfigOrExit();
+    const { runWebUi } = await import('./web-ui');
+    await runWebUi({ port: opts.port });
+  });
+
 // ══════════════════════════════════════════════════════════
 // ── Profile sub-commands ─────────────────────────────────
 // ══════════════════════════════════════════════════════════

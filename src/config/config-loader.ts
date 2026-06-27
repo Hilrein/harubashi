@@ -94,6 +94,9 @@ export function flattenForNestConfig(
   const p = profile.providers;
 
   const flat: Record<string, string | undefined> = {
+    // ── Active profile name (used by Web UI /api/status) ────
+    HARUBASHI_ACTIVE_PROFILE: config.activeProfile,
+
     // ── Database ────────────────────────────────────────────
     DATABASE_URL: HarubashiPaths.databaseUrl(config.activeProfile),
 

@@ -8,6 +8,10 @@ node_modules/
 dist/
 harubashi
 
+# ── Web UI (frontend) ────────────────────────────────────
+ui/dist/
+ui/node_modules/
+
 # ── Environment ───────────────────────────────────────────
 .env
 .env.local
