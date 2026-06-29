@@ -9,6 +9,7 @@ import {
   NotFoundException,
   Post,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   loadHarubashiConfig,
   saveHarubashiConfig,
@@ -18,6 +19,7 @@ import {
   initializeDatabase,
   upsertDefaultUser,
 } from '../commands/setup.helpers';
+import { reloadConfigCache } from '../config/config-reload.helper';
 import { CreateProfileDto } from './models/create-profile.dto';
 import type { Profile, ProviderName } from '../config/config.types';
 
@@ -31,6 +33,8 @@ export interface ProfileListItem {
 
 @Controller('profiles')
 export class ProfilesController {
+  constructor(private readonly configService: ConfigService) {}
+
   @Get()
   getProfiles(): ProfileListItem[] {
     const config = loadHarubashiConfig();
@@ -65,6 +69,9 @@ export class ProfilesController {
 
     config.activeProfile = body.name;
     saveHarubashiConfig(config);
+
+    // Dynamic configuration hot-reload
+    reloadConfigCache(this.configService);
 
     return { success: true };
   }

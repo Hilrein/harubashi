@@ -1,7 +1,11 @@
 import { useEffect } from "react"
+import { BrowserRouter, Routes, Route, NavLink, Navigate } from "react-router-dom"
 import { useUiStore } from "@/lib/uiStore"
-import type { TabName } from "@/lib/uiStore"
 import { ProfilesTab } from "@/components/ProfilesTab"
+import { SettingsTab } from "@/components/SettingsTab"
+import { LogsTab } from "@/components/LogsTab"
+import { SkillsTab } from "@/components/SkillsTab"
+import { ChatTab } from "@/components/ChatTab"
 import {
   MessageSquare,
   Users,
@@ -11,82 +15,30 @@ import {
 } from "lucide-react"
 
 interface SidebarItem {
-  readonly id: TabName
+  readonly path: string
   readonly label: string
   readonly icon: React.ComponentType<{ className?: string }>
 }
 
 const SIDEBAR_ITEMS: readonly SidebarItem[] = [
-  { id: "chat", label: "Chat", icon: MessageSquare },
-  { id: "profiles", label: "Profiles", icon: Users },
-  { id: "skills", label: "Skills", icon: Lightbulb },
-  { id: "logs", label: "Logs", icon: Terminal },
-  { id: "settings", label: "Settings", icon: Settings },
+  { path: "/chat", label: "Chat", icon: MessageSquare },
+  { path: "/profiles", label: "Profiles", icon: Users },
+  { path: "/skills", label: "Skills", icon: Lightbulb },
+  { path: "/logs", label: "Logs", icon: Terminal },
+  { path: "/settings", label: "Settings", icon: Settings },
 ]
 
-const App = () => {
-  const activeTab = useUiStore((state) => state.activeTab)
+const AppContent = () => {
   const activeProfile = useUiStore((state) => state.activeProfile)
-  const setActiveTab = useUiStore((state) => state.setActiveTab)
   const fetchStatus = useUiStore((state) => state.fetchStatus)
 
   useEffect(() => {
     fetchStatus()
-    // Poll status periodically (every 5 seconds) to ensure synchronization
     const timer = setInterval(() => {
       fetchStatus()
     }, 5000)
     return () => clearInterval(timer)
   }, [fetchStatus])
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case "profiles":
-        return <ProfilesTab />
-      case "chat":
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md mx-auto space-y-4">
-            <MessageSquare className="h-10 w-10 text-muted-foreground/60" />
-            <h2 className="text-xl font-medium tracking-tight">Interactive Chat</h2>
-            <p className="text-sm text-muted-foreground">
-              Interact with the active agent sessions directly. This tab is currently placeholder and will be completed in future batches.
-            </p>
-          </div>
-        )
-      case "skills":
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md mx-auto space-y-4">
-            <Lightbulb className="h-10 w-10 text-muted-foreground/60" />
-            <h2 className="text-xl font-medium tracking-tight">Skills Manager</h2>
-            <p className="text-sm text-muted-foreground">
-              Configure and test cognitive agent skills. This tab is currently placeholder and will be completed in future batches.
-            </p>
-          </div>
-        )
-      case "logs":
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md mx-auto space-y-4">
-            <Terminal className="h-10 w-10 text-muted-foreground/60" />
-            <h2 className="text-xl font-medium tracking-tight">System Logs</h2>
-            <p className="text-sm text-muted-foreground">
-              Inspect backend logs in real-time. This tab is currently placeholder and will be completed in future batches.
-            </p>
-          </div>
-        )
-      case "settings":
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center max-w-md mx-auto space-y-4">
-            <Settings className="h-10 w-10 text-muted-foreground/60" />
-            <h2 className="text-xl font-medium tracking-tight">Settings</h2>
-            <p className="text-sm text-muted-foreground">
-              Manage global configurations and preferences. This tab is currently placeholder and will be completed in future batches.
-            </p>
-          </div>
-        )
-      default:
-        return null
-    }
-  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -105,23 +57,23 @@ const App = () => {
           <nav className="px-4 space-y-1.5">
             {SIDEBAR_ITEMS.map((item) => {
               const Icon = item.icon
-              const isActive = activeTab === item.id
 
               return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  tabIndex={0}
+                <NavLink
+                  key={item.path}
+                  to={item.path}
                   aria-label={`Navigate to ${item.label}`}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
-                    isActive
-                      ? "bg-accent/80 text-foreground font-medium border border-border/30"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent/30"
-                  }`}
+                  className={({ isActive }) =>
+                    `w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 outline-none focus-visible:ring-1 focus-visible:ring-primary/50 ${
+                      isActive
+                        ? "bg-accent/80 text-foreground font-medium border border-border/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/30"
+                    }`
+                  }
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
-                </button>
+                </NavLink>
               )
             })}
           </nav>
@@ -146,10 +98,26 @@ const App = () => {
       {/* ── Main Workspace Area ────────────────────────────── */}
       <main className="flex-1 overflow-y-auto bg-background/50 p-8">
         <div className="max-w-6xl mx-auto">
-          {renderContent()}
+          <Routes>
+            <Route path="/" element={<Navigate to="/profiles" replace />} />
+            <Route path="/profiles" element={<ProfilesTab />} />
+            <Route path="/settings" element={<SettingsTab />} />
+            <Route path="/logs" element={<LogsTab />} />
+            <Route path="/chat" element={<ChatTab />} />
+            <Route path="/skills" element={<SkillsTab />} />
+            <Route path="*" element={<Navigate to="/profiles" replace />} />
+          </Routes>
         </div>
       </main>
     </div>
+  )
+}
+
+const App = () => {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   )
 }
 

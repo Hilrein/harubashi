@@ -4,6 +4,10 @@ import * as path from 'path';
 import { HarubashiConfigModule } from '../config/config.module';
 import { StatusController } from './status.controller';
 import { ProfilesController } from './profiles.controller';
+import { ConfigController } from './config.controller';
+import { LogsController } from './logs.controller';
+import { SkillsController } from './skills.controller';
+import { ChatController } from './chat.controller';
 
 /**
  * Lightweight NestJS module activated exclusively by `harubashi ui`.
@@ -22,10 +26,17 @@ import { ProfilesController } from './profiles.controller';
     ServeStaticModule.forRoot({
       // Resolve from dist/web-ui/ → ../../ui/dist (= project root ui/dist/)
       rootPath: path.resolve(__dirname, '..', '..', 'ui', 'dist'),
-      // Exclude /api routes from static serving
-      exclude: ['/api*'],
+      // Exclude all api routes from static serving to allow clean NestJS 404 responses
+      exclude: ['/api{*path}'],
     }),
   ],
-  controllers: [StatusController, ProfilesController],
+  controllers: [
+    StatusController,
+    ProfilesController,
+    ConfigController,
+    LogsController,
+    SkillsController,
+    ChatController,
+  ],
 })
 export class WebUiModule {}
