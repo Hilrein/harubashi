@@ -18,7 +18,7 @@ import { isToolUseBlock, isThinkingBlock, isRedactedThinkingBlock } from '../com
 import { IInteractionAdapter } from '../common/adapters/interaction-adapter.interface';
 import { DEFAULT_USER_NAME } from '../common/constants';
 
-const MAX_ITERATIONS = 10;
+const MAX_ITERATIONS = 25;
 
 export interface ProcessorResult {
   taskId: string;
