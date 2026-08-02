@@ -16,6 +16,7 @@ import {
   askProviderCredentials,
   askSelectOrCreateProfile,
   askTelegram,
+  askWebSearch,
   copyBundledSkills,
   createDirectories,
   initializeDatabase,
@@ -100,8 +101,12 @@ async function runFirstTimeSetup(): Promise<void> {
   printStep(5, 'Messaging');
   const telegram = await askTelegram();
 
-  // ── Step 6: Materialize ────────────────────────────────
-  printStep(6, 'Creating ~/.harubashi/');
+  // ── Step 6: Web Search (optional) ──────────────────────
+  printStep(6, 'Web Search');
+  const tavilyApiKey = await askWebSearch();
+
+  // ── Step 7: Materialize ────────────────────────────────
+  printStep(7, 'Creating ~/.harubashi/');
   createDirectories();
   copyBundledSkills();
 
@@ -109,6 +114,7 @@ async function runFirstTimeSetup(): Promise<void> {
     llmProvider: providerName,
     providers,
     ...(telegram ? { telegram } : {}),
+    ...(tavilyApiKey ? { tavilyApiKey } : {}),
   };
   const config: HarubashiConfig = {
     activeProfile: profileName,
@@ -117,8 +123,8 @@ async function runFirstTimeSetup(): Promise<void> {
   saveHarubashiConfig(config);
   console.log(`  \x1b[32m✓\x1b[0m  Wrote ${HarubashiPaths.configFile}`);
 
-  // ── Step 7: Database ───────────────────────────────────
-  printStep(7, 'Database');
+  // ── Step 8: Database ───────────────────────────────────
+  printStep(8, 'Database');
   await initializeDatabase(profileName);
   await upsertDefaultUser(profileName);
 

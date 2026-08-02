@@ -55,6 +55,7 @@ export interface Profile {
   providers: ProvidersBlock;
   telegram?: TelegramConfig;
   commandGuard?: CommandGuardConfig;
+  tavilyApiKey?: string;
 }
 
 export interface HarubashiConfig {

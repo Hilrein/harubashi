@@ -14,6 +14,7 @@ export const HarubashiPaths = {
   databasesDir: path.join(ROOT, 'databases'),
   skillsDir: path.join(ROOT, 'skills'),
   logsDir: path.join(ROOT, 'logs'),
+  downloadsDir: path.join(ROOT, 'downloads'),
   logFile: path.join(ROOT, 'logs', 'harubashi.log'),
 
   /** Path to the SQLite file for a given profile. */

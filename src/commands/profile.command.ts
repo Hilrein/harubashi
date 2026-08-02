@@ -18,6 +18,7 @@ import {
   askProviderCredentials,
   askSelectOrCreateProfile,
   askTelegram,
+  askWebSearch,
   databaseExists,
   initializeDatabase,
   prettyProviderName,
@@ -148,14 +149,19 @@ export async function runProfileCreate(nameArg?: string): Promise<void> {
   printStep(5, 'Messaging');
   const telegram = await askTelegram(active.telegram);
 
+  // ── Step 6: Web Search (default = active) ──────────────
+  printStep(6, 'Web Search');
+  const tavilyApiKey = await askWebSearch({ tavilyApiKey: active.tavilyApiKey });
+
   const newProfile: Profile = {
     llmProvider: providerName,
     providers,
     ...(telegram ? { telegram } : {}),
+    ...(tavilyApiKey ? { tavilyApiKey } : {}),
   };
 
-  // ── Step 6: Database (init BEFORE writing config) ─────
-  printStep(6, 'Database');
+  // ── Step 7: Database (init BEFORE writing config) ─────
+  printStep(7, 'Database');
   try {
     await initializeDatabase(name);
     await upsertDefaultUser(name);
@@ -169,7 +175,7 @@ export async function runProfileCreate(nameArg?: string): Promise<void> {
     process.exit(1);
   }
 
-  // ── Step 7: Persist ───────────────────────────────────
+  // ── Step 8: Persist ───────────────────────────────────
   config.profiles[name] = newProfile;
   saveHarubashiConfig(config);
   console.log(
@@ -257,13 +263,18 @@ async function runEditFlow(
   printStep(4, 'Messaging');
   const telegram = await askTelegram(existing.telegram);
 
+  // ── Step 5: Web Search (default = current) ─────────────
+  printStep(5, 'Web Search');
+  const tavilyApiKey = await askWebSearch({ tavilyApiKey: existing.tavilyApiKey });
+
   const updatedProfile: Profile = {
     llmProvider: providerName,
     providers,
     ...(telegram ? { telegram } : {}),
+    ...(tavilyApiKey ? { tavilyApiKey } : {}),
   };
 
-  // ── Step 5: Database (skipped if .db already exists) ──
+  // ── Step 6: Database (skipped if .db already exists) ──
   if (databaseExists(name)) {
     console.log(
       `\n\x1b[90m── Database ──────────────────────────────────\x1b[0m`,
@@ -272,7 +283,7 @@ async function runEditFlow(
       `  \x1b[90m↪ ${HarubashiPaths.databaseFile(name)} already exists. Skipping init.\x1b[0m`,
     );
   } else {
-    printStep(5, 'Database');
+    printStep(6, 'Database');
     try {
       await initializeDatabase(name);
       await upsertDefaultUser(name);

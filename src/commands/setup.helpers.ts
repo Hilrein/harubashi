@@ -277,6 +277,38 @@ export async function askTelegram(
   return { enabled: true, botToken };
 }
 
+/**
+ * Inquirer prompt: optional Web Search setup (Tavily API). Pre-fills the key
+ * if a previous one exists in `defaults`.
+ */
+export async function askWebSearch(
+  defaults?: { tavilyApiKey?: string },
+): Promise<string | undefined> {
+  const wantsWebSearch = await confirm({
+    message: 'Do you want to enable Web Search (Tavily API)?',
+    default: Boolean(defaults?.tavilyApiKey),
+  });
+
+  if (!wantsWebSearch) {
+    console.log(
+      '\x1b[90m  ↪ Skipped. You can configure it later by editing config.yaml.\x1b[0m',
+    );
+    return undefined;
+  }
+
+  if (defaults?.tavilyApiKey) {
+    console.log(
+      '\x1b[90m  ↪ Press Enter to keep the existing API key.\x1b[0m',
+    );
+  }
+  const key = await password({
+    message: 'Tavily API Key:',
+    mask: '*',
+    ...(defaults?.tavilyApiKey ? { default: defaults.tavilyApiKey } : {}),
+  });
+  return key.trim() || undefined;
+}
+
 // ══════════════════════════════════════════════════════════
 // ── Filesystem materialization ───────────────────────────
 // ══════════════════════════════════════════════════════════
@@ -291,6 +323,7 @@ export function createDirectories(): void {
   fs.mkdirSync(HarubashiPaths.databasesDir, { recursive: true });
   fs.mkdirSync(HarubashiPaths.skillsDir, { recursive: true });
   fs.mkdirSync(HarubashiPaths.logsDir, { recursive: true });
+  fs.mkdirSync(HarubashiPaths.downloadsDir, { recursive: true });
   console.log(`  \x1b[32m✓\x1b[0m  Created ${HarubashiPaths.root}`);
 }
 

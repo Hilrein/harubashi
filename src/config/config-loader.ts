@@ -125,6 +125,9 @@ export function flattenForNestConfig(
     TELEGRAM_BOT_TOKEN:
       profile.telegram?.enabled === false ? undefined : profile.telegram?.botToken,
 
+    // ── Web Search ─────────────────────────────────────────
+    TAVILY_API_KEY: profile.tavilyApiKey,
+
     // ── Command Guard ──────────────────────────────────────
     HARUBASHI_SAFE_COMMANDS: profile.commandGuard?.safeCommands?.join(','),
     HARUBASHI_COMMAND_TIMEOUT:
